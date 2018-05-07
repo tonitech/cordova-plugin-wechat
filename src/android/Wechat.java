@@ -9,6 +9,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.webkit.URLUtil;
 
+import com.tencent.mm.opensdk.modelbiz.ChooseCardFromWXCardPackage;
 import com.tencent.mm.opensdk.modelmsg.SendAuth;
 import com.tencent.mm.opensdk.modelmsg.SendMessageToWX;
 import com.tencent.mm.opensdk.modelmsg.WXAppExtendObject;
@@ -24,11 +25,11 @@ import com.tencent.mm.opensdk.modelpay.PayReq;
 import com.tencent.mm.opensdk.openapi.IWXAPI;
 import com.tencent.mm.opensdk.openapi.WXAPIFactory;
 
-import com.tencent.mm.opensdk.modelbiz.ChooseCardFromWXCardPackage;
-
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaArgs;
+import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,7 +37,6 @@ import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -44,12 +44,12 @@ public class Wechat extends CordovaPlugin {
 
     public static final String TAG = "Cordova.Plugin.Wechat";
 
-    public static final String PREFS_NAME = "Cordova.Plugin.Wechat";
-    public static final String WXAPPID_PROPERTY_KEY = "wechatappid";
+    private static final String PREFS_NAME = "Cordova.Plugin.Wechat";
+    private static final String WXAPPID_PROPERTY_KEY = "wechatappid";
 
-    public static final String ERROR_WECHAT_NOT_INSTALLED = "未安装微信";
-    public static final String ERROR_INVALID_PARAMETERS = "参数格式错误";
-    public static final String ERROR_SEND_REQUEST_FAILED = "发送请求失败";
+    private static final String ERROR_WECHAT_NOT_INSTALLED = "未安装微信";
+    private static final String ERROR_INVALID_PARAMETERS = "参数格式错误";
+    private static final String ERROR_SEND_REQUEST_FAILED = "发送请求失败";
     public static final String ERROR_WECHAT_RESPONSE_COMMON = "普通错误";
     public static final String ERROR_WECHAT_RESPONSE_USER_CANCEL = "用户点击取消并返回";
     public static final String ERROR_WECHAT_RESPONSE_SENT_FAILED = "发送失败";
@@ -57,55 +57,54 @@ public class Wechat extends CordovaPlugin {
     public static final String ERROR_WECHAT_RESPONSE_UNSUPPORT = "微信不支持";
     public static final String ERROR_WECHAT_RESPONSE_UNKNOWN = "未知错误";
 
-    public static final String EXTERNAL_STORAGE_IMAGE_PREFIX = "external://";
+    private static final String EXTERNAL_STORAGE_IMAGE_PREFIX = "external://";
 
-    public static final String KEY_ARG_MESSAGE = "message";
-    public static final String KEY_ARG_SCENE = "scene";
-    public static final String KEY_ARG_TEXT = "text";
-    public static final String KEY_ARG_MESSAGE_TITLE = "title";
-    public static final String KEY_ARG_MESSAGE_DESCRIPTION = "description";
-    public static final String KEY_ARG_MESSAGE_THUMB = "thumb";
-    public static final String KEY_ARG_MESSAGE_MEDIA = "media";
-    public static final String KEY_ARG_MESSAGE_MEDIA_TYPE = "type";
-    public static final String KEY_ARG_MESSAGE_MEDIA_WEBPAGEURL = "webpageUrl";
-    public static final String KEY_ARG_MESSAGE_MEDIA_IMAGE = "image";
+    private static final String KEY_ARG_MESSAGE = "message";
+    private static final String KEY_ARG_SCENE = "scene";
+    private static final String KEY_ARG_TEXT = "text";
+    private static final String KEY_ARG_MESSAGE_TITLE = "title";
+    private static final String KEY_ARG_MESSAGE_DESCRIPTION = "description";
+    private static final String KEY_ARG_MESSAGE_THUMB = "thumb";
+    private static final String KEY_ARG_MESSAGE_MEDIA = "media";
+    private static final String KEY_ARG_MESSAGE_MEDIA_TYPE = "type";
+    private static final String KEY_ARG_MESSAGE_MEDIA_WEBPAGEURL = "webpageUrl";
+    private static final String KEY_ARG_MESSAGE_MEDIA_IMAGE = "image";
     public static final String KEY_ARG_MESSAGE_MEDIA_TEXT = "text";
-    public static final String KEY_ARG_MESSAGE_MEDIA_MUSICURL = "musicUrl";
-    public static final String KEY_ARG_MESSAGE_MEDIA_MUSICDATAURL = "musicDataUrl";
-    public static final String KEY_ARG_MESSAGE_MEDIA_VIDEOURL = "videoUrl";
-    public static final String KEY_ARG_MESSAGE_MEDIA_FILE = "file";
-    public static final String KEY_ARG_MESSAGE_MEDIA_EMOTION = "emotion";
-    public static final String KEY_ARG_MESSAGE_MEDIA_EXTINFO = "extInfo";
-    public static final String KEY_ARG_MESSAGE_MEDIA_URL = "url";
+    private static final String KEY_ARG_MESSAGE_MEDIA_MUSICURL = "musicUrl";
+    private static final String KEY_ARG_MESSAGE_MEDIA_MUSICDATAURL = "musicDataUrl";
+    private static final String KEY_ARG_MESSAGE_MEDIA_VIDEOURL = "videoUrl";
+    private static final String KEY_ARG_MESSAGE_MEDIA_FILE = "file";
+    private static final String KEY_ARG_MESSAGE_MEDIA_EMOTION = "emotion";
+    private static final String KEY_ARG_MESSAGE_MEDIA_EXTINFO = "extInfo";
+    private static final String KEY_ARG_MESSAGE_MEDIA_URL = "url";
 
-    public static final int TYPE_WECHAT_SHARING_APP = 1;
-    public static final int TYPE_WECHAT_SHARING_EMOTION = 2;
-    public static final int TYPE_WECHAT_SHARING_FILE = 3;
-    public static final int TYPE_WECHAT_SHARING_IMAGE = 4;
-    public static final int TYPE_WECHAT_SHARING_MUSIC = 5;
-    public static final int TYPE_WECHAT_SHARING_VIDEO = 6;
-    public static final int TYPE_WECHAT_SHARING_WEBPAGE = 7;
+    private static final int TYPE_WECHAT_SHARING_APP = 1;
+    private static final int TYPE_WECHAT_SHARING_EMOTION = 2;
+    private static final int TYPE_WECHAT_SHARING_FILE = 3;
+    private static final int TYPE_WECHAT_SHARING_IMAGE = 4;
+    private static final int TYPE_WECHAT_SHARING_MUSIC = 5;
+    private static final int TYPE_WECHAT_SHARING_VIDEO = 6;
+    private static final int TYPE_WECHAT_SHARING_WEBPAGE = 7;
     public static final int TYPE_WECHAT_SHARING_TEXT = 8;
 
-    public static final int SCENE_SESSION = 0;
-    public static final int SCENE_TIMELINE = 1;
-    public static final int SCENE_FAVORITE = 2;
+    private static final int SCENE_SESSION = 0;
+    private static final int SCENE_TIMELINE = 1;
+    private static final int SCENE_FAVORITE = 2;
 
-    public static final int MAX_THUMBNAIL_SIZE = 320;
+    private static final int MAX_THUMBNAIL_SIZE = 320;
 
-    protected static CallbackContext currentCallbackContext;
-    protected static IWXAPI wxAPI;
-    protected static String appId;
+    private static CallbackContext currentCallbackContext;
+    private static IWXAPI wxAPI;
+    private static String appId;
 
     @Override
-    protected void pluginInitialize() {
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+        super.initialize(cordova, webView);
 
-        super.pluginInitialize();
-
-        String id = getAppId();
+        appId = preferences.getString(WXAPPID_PROPERTY_KEY, "");
 
         // save app id
-        saveAppId(cordova.getActivity(), id);
+        saveAppId(cordova.getActivity(), appId);
 
         // init api
         initWXAPI();
@@ -113,20 +112,21 @@ public class Wechat extends CordovaPlugin {
         Log.d(TAG, "plugin initialized.");
     }
 
-    protected void initWXAPI() {
+    private void initWXAPI() {
         IWXAPI api = getWxAPI(cordova.getActivity());
 
         if (api != null) {
-            api.registerApp(getAppId());
+            api.registerApp(appId);
         }
     }
 
     /**
      * Get weixin api
+     *
      * @param ctx
      * @return
      */
-    public static IWXAPI getWxAPI(Context ctx) {
+    private static IWXAPI getWxAPI(Context ctx) {
         if (wxAPI == null) {
             String appId = getSavedAppId(ctx);
 
@@ -142,16 +142,17 @@ public class Wechat extends CordovaPlugin {
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
         Log.d(TAG, String.format("%s is called. Callback ID: %s.", action, callbackContext.getCallbackId()));
 
-        if (action.equals("share")) {
-            return share(args, callbackContext);
-        } else if (action.equals("sendAuthRequest")) {
-            return sendAuthRequest(args, callbackContext);
-        } else if (action.equals("sendPaymentRequest")) {
-            return sendPaymentRequest(args, callbackContext);
-        } else if (action.equals("isWXAppInstalled")) {
-            return isInstalled(callbackContext);
-        }else if (action.equals("chooseInvoiceFromWX")){
-            return chooseInvoiceFromWX(args, callbackContext);
+        switch (action) {
+            case "share":
+                return share(args, callbackContext);
+            case "sendAuthRequest":
+                return sendAuthRequest(args, callbackContext);
+            case "sendPaymentRequest":
+                return sendPaymentRequest(args, callbackContext);
+            case "isWXAppInstalled":
+                return isInstalled(callbackContext);
+            case "chooseInvoiceFromWX":
+                return chooseInvoiceFromWX(args, callbackContext);
         }
 
         return false;
@@ -234,7 +235,7 @@ public class Wechat extends CordovaPlugin {
         return true;
     }
 
-    protected boolean sendAuthRequest(CordovaArgs args, CallbackContext callbackContext) {
+    private boolean sendAuthRequest(CordovaArgs args, CallbackContext callbackContext) {
         final IWXAPI api = getWxAPI(cordova.getActivity());
 
         final SendAuth.Req req = new SendAuth.Req();
@@ -263,7 +264,7 @@ public class Wechat extends CordovaPlugin {
         return true;
     }
 
-    protected boolean sendPaymentRequest(CordovaArgs args, CallbackContext callbackContext) {
+    private boolean sendPaymentRequest(CordovaArgs args, CallbackContext callbackContext) {
 
         // check if # of arguments is correct
         final JSONObject params;
@@ -278,9 +279,9 @@ public class Wechat extends CordovaPlugin {
 
         try {
             final String appid = params.getString("appid");
-            final String savedAppid = getAppId(cordova.getActivity());
+            final String savedAppid = appId;
             if (!savedAppid.equals(appid)) {
-                this.saveAppId(cordova.getActivity(), appid);
+                saveAppId(cordova.getActivity(), appid);
             }
 
             req.appId = appid;
@@ -314,52 +315,52 @@ public class Wechat extends CordovaPlugin {
         return true;
     }
 
-   protected boolean chooseInvoiceFromWX(CordovaArgs args, CallbackContext callbackContext) {
+    private boolean chooseInvoiceFromWX(CordovaArgs args, CallbackContext callbackContext) {
 
-               final IWXAPI api = getWxAPI(cordova.getActivity());
+        final IWXAPI api = getWxAPI(cordova.getActivity());
 
-               // check if # of arguments is correct
-               final JSONObject params;
-               try {
-                   params = args.getJSONObject(0);
-               } catch (JSONException e) {
-                   callbackContext.error(ERROR_INVALID_PARAMETERS);
-                   return true;
-               }
+        // check if # of arguments is correct
+        final JSONObject params;
+        try {
+            params = args.getJSONObject(0);
+        } catch (JSONException e) {
+            callbackContext.error(ERROR_INVALID_PARAMETERS);
+            return true;
+        }
 
-               ChooseCardFromWXCardPackage.Req req = new ChooseCardFromWXCardPackage.Req();
+        ChooseCardFromWXCardPackage.Req req = new ChooseCardFromWXCardPackage.Req();
 
-               try {
-                   req.appId = getAppId();
-                   req.cardType = "INVOICE";
-                   req.signType = params.getString("signType");
-                   req.cardSign = params.getString("cardSign");
-                   req.nonceStr = params.getString("nonceStr");
-                   req.timeStamp = params.getString("timeStamp");
-                   req.canMultiSelect = "1";
-               } catch (Exception e) {
-                   Log.e(TAG, e.getMessage());
+        try {
+            req.appId = appId;
+            req.cardType = "INVOICE";
+            req.signType = params.getString("signType");
+            req.cardSign = params.getString("cardSign");
+            req.nonceStr = params.getString("nonceStr");
+            req.timeStamp = params.getString("timeStamp");
+            req.canMultiSelect = "1";
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
 
-                   callbackContext.error(ERROR_INVALID_PARAMETERS);
-                   return true;
-               }
+            callbackContext.error(ERROR_INVALID_PARAMETERS);
+            return true;
+        }
 
-               if (api.sendReq(req)) {
-                   Log.i(TAG, "Invoice request has been sent successfully.");
+        if (api.sendReq(req)) {
+            Log.i(TAG, "Invoice request has been sent successfully.");
 
-                   // send no result
-                   sendNoResultPluginResult(callbackContext);
-               } else {
-                   Log.i(TAG, "Invoice request has been sent unsuccessfully.");
+            // send no result
+            sendNoResultPluginResult(callbackContext);
+        } else {
+            Log.i(TAG, "Invoice request has been sent unsuccessfully.");
 
-                   // send error
-                   callbackContext.error(ERROR_SEND_REQUEST_FAILED);
-               }
+            // send error
+            callbackContext.error(ERROR_SEND_REQUEST_FAILED);
+        }
 
-               return true;
-           }
+        return true;
+    }
 
-    protected boolean isInstalled(CallbackContext callbackContext) {
+    private boolean isInstalled(CallbackContext callbackContext) {
         final IWXAPI api = getWxAPI(cordova.getActivity());
 
         if (!api.isWXAppInstalled()) {
@@ -372,7 +373,7 @@ public class Wechat extends CordovaPlugin {
     }
 
 
-    protected WXMediaMessage buildSharingMessage(JSONObject params)
+    private WXMediaMessage buildSharingMessage(JSONObject params)
             throws JSONException {
         Log.d(TAG, "Start building message.");
 
@@ -433,7 +434,9 @@ public class Wechat extends CordovaPlugin {
                 case TYPE_WECHAT_SHARING_IMAGE:
                     Bitmap image = getBitmap(message.getJSONObject(KEY_ARG_MESSAGE_MEDIA), KEY_ARG_MESSAGE_MEDIA_IMAGE, 0);
                     mediaObject = new WXImageObject(image);
-                    image.recycle();
+                    if (image != null) {
+                        image.recycle();
+                    }
                     break;
 
                 case TYPE_WECHAT_SHARING_MUSIC:
@@ -468,11 +471,11 @@ public class Wechat extends CordovaPlugin {
         return type + System.currentTimeMillis();
     }
 
-    protected Bitmap getThumbnail(JSONObject message, String key) {
+    private Bitmap getThumbnail(JSONObject message, String key) {
         return getBitmap(message, key, MAX_THUMBNAIL_SIZE);
     }
 
-    protected Bitmap getBitmap(JSONObject message, String key, int maxSize) {
+    private Bitmap getBitmap(JSONObject message, String key, int maxSize) {
         Bitmap bmp = null;
         String url = null;
 
@@ -519,10 +522,7 @@ public class Wechat extends CordovaPlugin {
 
             inputStream.close();
 
-        } catch (JSONException e) {
-            bmp = null;
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (JSONException | IOException e) {
             bmp = null;
             e.printStackTrace();
         }
@@ -536,7 +536,7 @@ public class Wechat extends CordovaPlugin {
      * @param url
      * @return
      */
-    protected InputStream getFileInputStream(String url) {
+    private InputStream getFileInputStream(String url) {
         try {
 
             InputStream inputStream = null;
@@ -586,8 +586,6 @@ public class Wechat extends CordovaPlugin {
 
             return inputStream;
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -595,38 +593,32 @@ public class Wechat extends CordovaPlugin {
         return null;
     }
 
-    public static String getAppId() {
-        if (appId == null) {
-            appId = preferences.getString(WXAPPID_PROPERTY_KEY, "");
-        }
-
-        return appId;
-    }
-
     /**
      * Get saved app id
+     *
      * @param ctx
      * @return
      */
-    public static String getSavedAppId(Context ctx) {
+    private static String getSavedAppId(Context ctx) {
         SharedPreferences settings = ctx.getSharedPreferences(PREFS_NAME, 0);
         return settings.getString(WXAPPID_PROPERTY_KEY, "");
     }
 
     /**
      * Save app id into SharedPreferences
+     *
      * @param ctx
      * @param id
      */
-    public static void saveAppId(Context ctx, String id) {
+    private static void saveAppId(Context ctx, String id) {
         if (id.isEmpty()) {
-            return ;
+            return;
         }
 
         SharedPreferences settings = ctx.getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor editor = settings.edit();
         editor.putString(WXAPPID_PROPERTY_KEY, id);
-        editor.commit();
+        editor.apply();
     }
 
     public static CallbackContext getCurrentCallbackContext() {
