@@ -1,4 +1,4 @@
-package xu.li.cordova.wechat;
+package com.shuliantt.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -120,13 +120,17 @@ public class Wechat extends CordovaPlugin {
         }
     }
 
+    public static String getAppId() {
+        return appId;
+    }
+
     /**
      * Get weixin api
      *
      * @param ctx
      * @return
      */
-    private static IWXAPI getWxAPI(Context ctx) {
+    public static IWXAPI getWxAPI(Context ctx) {
         if (wxAPI == null) {
             String appId = getSavedAppId(ctx);
 
@@ -599,7 +603,7 @@ public class Wechat extends CordovaPlugin {
      * @param ctx
      * @return
      */
-    private static String getSavedAppId(Context ctx) {
+    public static String getSavedAppId(Context ctx) {
         SharedPreferences settings = ctx.getSharedPreferences(PREFS_NAME, 0);
         return settings.getString(WXAPPID_PROPERTY_KEY, "");
     }
@@ -610,7 +614,7 @@ public class Wechat extends CordovaPlugin {
      * @param ctx
      * @param id
      */
-    private static void saveAppId(Context ctx, String id) {
+    public static void saveAppId(Context ctx, String id) {
         if (id.isEmpty()) {
             return;
         }
