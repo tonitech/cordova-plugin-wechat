@@ -1,4 +1,4 @@
-package __PACKAGE_NAME__;
+package com.shuliantt.app.wxapi;
 
 public class WXPayEntryActivity extends EntryActivity {
 
